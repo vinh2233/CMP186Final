@@ -1,23 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, addMonths, subMonths, isBefore } from 'date-fns';
 import ApiService from '../../service/ApiService';
-import Pagination from '../common/Pagination';
+import './ManageBookingsPage.css';
 
 const ManageBookingsPage = () => {
     const [bookings, setBookings] = useState([]);
-    const [filteredBookings, setFilteredBookings] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [bookingsPerPage] = useState(6);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [currentMonthDays, setCurrentMonthDays] = useState([]);
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [bookingsForSelectedDate, setBookingsForSelectedDate] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchBookings = async () => {
             try {
                 const response = await ApiService.getAllBookings();
-                const allBookings = response.bookingList;
-                setBookings(allBookings);
-                setFilteredBookings(allBookings);
+                const today = new Date();
+                // Filter out past bookings
+                const futureBookings = response.bookingList.filter(
+                    (booking) => !isBefore(new Date(booking.checkOutDate), today)
+                );
+                setBookings(futureBookings);
             } catch (error) {
                 console.error('Error fetching bookings:', error.message);
             }
@@ -27,65 +31,79 @@ const ManageBookingsPage = () => {
     }, []);
 
     useEffect(() => {
-        filterBookings(searchTerm);
-    }, [searchTerm, bookings]);
+        // Generate all days for the current month
+        const daysInMonth = eachDayOfInterval({
+            start: startOfMonth(currentMonth),
+            end: endOfMonth(currentMonth),
+        });
+        setCurrentMonthDays(daysInMonth);
+    }, [currentMonth]);
 
-    const filterBookings = (term) => {
-        if (term === '') {
-            setFilteredBookings(bookings);
-        } else {
-            const filtered = bookings.filter((booking) =>
-                booking.bookingConfirmationCode && booking.bookingConfirmationCode.toLowerCase().includes(term.toLowerCase())
-            );
-            setFilteredBookings(filtered);
-        }
-        setCurrentPage(1);
+    const handleDayClick = (date) => {
+        setSelectedDate(date);
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        const filteredBookings = bookings.filter(
+            (booking) => booking.checkInDate === formattedDate || booking.checkOutDate === formattedDate
+        );
+        setBookingsForSelectedDate(filteredBookings);
     };
 
-    const handleSearchChange = (e) => {
-        setSearchTerm(e.target.value);
+    const handlePreviousMonth = () => {
+        setCurrentMonth((prev) => subMonths(prev, 1));
     };
 
-    const indexOfLastBooking = currentPage * bookingsPerPage;
-    const indexOfFirstBooking = indexOfLastBooking - bookingsPerPage;
-    const currentBookings = filteredBookings.slice(indexOfFirstBooking, indexOfLastBooking);
-
-    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+    const handleNextMonth = () => {
+        setCurrentMonth((prev) => addMonths(prev, 1));
+    };
 
     return (
-        <div className='bookings-container'>
-            <h2>All Bookings</h2>
-            <div className='search-div'>
-                <label>Filter by Booking Number:</label>
-                <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    placeholder="Enter booking number"
-                />
+        <div className="calendar-container">
+            <h2>Manage Bookings</h2>
+            <div className="calendar-header">
+                <button onClick={handlePreviousMonth}>&lt;</button>
+                <h3>{format(currentMonth, 'MMMM yyyy')}</h3>
+                <button onClick={handleNextMonth}>&gt;</button>
             </div>
-
-            <div className="booking-results">
-                {currentBookings.map((booking) => (
-                    <div key={booking.id} className="booking-result-item">
-                        <p><strong>Booking Code:</strong> {booking.bookingConfirmationCode}</p>
-                        <p><strong>Check In Date:</strong> {booking.checkInDate}</p>
-                        <p><strong>Check out Date:</strong> {booking.checkOutDate}</p>
-                        <p><strong>Total Guests:</strong> {booking.totalNumOfGuest}</p>
-                        <button
-                            className="edit-room-button"
-                            onClick={() => navigate(`/admin/edit-booking/${booking.bookingConfirmationCode}`)}
-                        >Manage Booking</button>
+            <div className="calendar-grid">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                    <div key={day} className="calendar-day-header">
+                        {day}
+                    </div>
+                ))}
+                {currentMonthDays.map((day) => (
+                    <div
+                        key={day}
+                        className={`calendar-day ${isBefore(day, new Date()) ? 'past-day' : ''}`}
+                        onClick={() => !isBefore(day, new Date()) && handleDayClick(day)}
+                    >
+                        {format(day, 'd')}
                     </div>
                 ))}
             </div>
 
-            <Pagination
-                roomsPerPage={bookingsPerPage}
-                totalRooms={filteredBookings.length}
-                currentPage={currentPage}
-                paginate={paginate}
-            />
+            {selectedDate && (
+                <div className="bookings-for-date">
+                    <h3>Bookings for {format(selectedDate, 'yyyy-MM-dd')}</h3>
+                    {bookingsForSelectedDate.length > 0 ? (
+                        bookingsForSelectedDate.map((booking) => (
+                            <div key={booking.id} className="booking-item">
+                                <p><strong>Booking Code:</strong> {booking.bookingConfirmationCode}</p>
+                                <p><strong>Check In Date:</strong> {booking.checkInDate}</p>
+                                <p><strong>Check Out Date:</strong> {booking.checkOutDate}</p>
+                                <p><strong>Room Number:</strong> {booking.roomNumber}</p>
+                                <button
+                                    className="edit-room-button"
+                                    onClick={() => navigate(`/admin/edit-booking/${booking.bookingConfirmationCode}`)}
+                                >
+                                    Manage Booking
+                                </button>
+                            </div>
+                        ))
+                    ) : (
+                        <p>No bookings for this date.</p>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
