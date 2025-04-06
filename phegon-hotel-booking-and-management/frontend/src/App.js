@@ -19,6 +19,7 @@ import ProfilePage from "./component/profile/ProfilePage";
 import EditProfilePage from "./component/profile/EditProfilePage";
 import { ProtectedRoute, AdminRoute } from "./service/guard";
 import DialogflowMessenger from "./component/aichat/DialogflowMessenger";
+import AllBookingsPage from './component/admin/AllBookingsPage';
 
 function App() {
   return (
@@ -73,6 +74,9 @@ function App() {
               path="/admin/edit-booking/:bookingCode"
               element={<AdminRoute element={<EditBookingPage />} />}
             />
+            <Route path="/admin/all-bookings" element={<AllBookingsPage />} 
+              
+              />
 
             {/* Fallback Route */}
             <Route path="*" element={<Navigate to="/login" />} />
