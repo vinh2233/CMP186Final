@@ -1,0 +1,43 @@
+.all-bookings-container {
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+}
+
+.bookings-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.booking-item {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    width: 300px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.booking-item p {
+    margin: 5px 0;
+}
+
+.edit-room-button {
+    margin-top: 10px;
+    padding: 5px 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.edit-room-button:hover {
+    background-color: #0056b3;
+}
+
+.error-message {
+    color: red;
+    font-weight: bold;
+}
